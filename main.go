@@ -13,6 +13,7 @@ type options struct {
 	envPath    string
 	context    string
 	namespace  string
+	address    string
 	dryRun     bool
 }
 
@@ -46,6 +47,7 @@ func parseOptions(args []string, stderr io.Writer) (options, bool, error) {
 	flags.StringVar(&opts.envPath, "env", "", "dotenv file (overrides env_file in config)")
 	flags.StringVar(&opts.context, "context", "", "Kubernetes context override")
 	flags.StringVar(&opts.namespace, "namespace", "", "default namespace override (individual service namespaces take precedence)")
+	flags.StringVar(&opts.address, "address", "", "default bind address override (individual service addresses take precedence)")
 	flags.BoolVar(&opts.dryRun, "dry-run", false, "print kubectl commands without running them")
 	if err := flags.Parse(args); err == flag.ErrHelp {
 		return opts, true, nil

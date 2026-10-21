@@ -17,6 +17,7 @@ import (
 type config struct {
 	Context   string    `json:"context" yaml:"context"`
 	Namespace string    `json:"namespace" yaml:"namespace"`
+	Address   string    `json:"address" yaml:"address"`
 	EnvFile   string    `json:"env_file" yaml:"env_file"`
 	Forwards  []forward `json:"forwards" yaml:"forwards"`
 }
@@ -24,6 +25,7 @@ type config struct {
 type forward struct {
 	Service   string   `json:"service" yaml:"service"`
 	Namespace string   `json:"namespace" yaml:"namespace"`
+	Address   string   `json:"address" yaml:"address"`
 	Ports     []string `json:"ports" yaml:"ports"`
 }
 
@@ -53,11 +55,17 @@ func prepare(opts options) (forwardPlan, error) {
 	if value := vars["KUBEPIN_NAMESPACE"]; value != "" {
 		cfg.Namespace = value
 	}
+	if value := vars["KUBEPIN_ADDRESS"]; value != "" {
+		cfg.Address = value
+	}
 	if opts.context != "" {
 		cfg.Context = opts.context
 	}
 	if opts.namespace != "" {
 		cfg.Namespace = opts.namespace
+	}
+	if opts.address != "" {
+		cfg.Address = opts.address
 	}
 	if cfg.Context, err = expand(cfg.Context, vars); err != nil {
 		return forwardPlan{}, fmt.Errorf("context: %w", err)
@@ -71,7 +79,16 @@ func prepare(opts options) (forwardPlan, error) {
 	if cfg.Context == "" {
 		return forwardPlan{}, errors.New("Kubernetes context is required in config, KUBEPIN_CONTEXT, or -context")
 	}
-	targets, err := resolve(cfg.Forwards, vars, cfg.Namespace)
+	if cfg.Address == "" {
+		cfg.Address = "127.0.0.1"
+	}
+	if cfg.Address, err = expand(cfg.Address, vars); err != nil {
+		return forwardPlan{}, fmt.Errorf("address: %w", err)
+	}
+	if cfg.Address, err = validateAddress(cfg.Address); err != nil {
+		return forwardPlan{}, fmt.Errorf("address: %w", err)
+	}
+	targets, err := resolve(cfg.Forwards, vars, cfg.Namespace, cfg.Address)
 	if err != nil {
 		return forwardPlan{}, err
 	}

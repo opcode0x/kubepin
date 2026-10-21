@@ -25,7 +25,7 @@ func runForwards(contextName string, targets []target, dryRun bool, stdout, stde
 	defer stop()
 	var workers sync.WaitGroup
 	for _, t := range targets {
-		commandArgs := []string{"--context", contextName, "--namespace", t.Namespace, "port-forward", "service/" + t.Service, t.Port, "--address", "127.0.0.1"}
+		commandArgs := []string{"--context", contextName, "--namespace", t.Namespace, "port-forward", "service/" + t.Service, t.Port, "--address", t.Address}
 		fmt.Fprintln(stdout, "kubectl", strings.Join(commandArgs, " "))
 		if dryRun {
 			continue

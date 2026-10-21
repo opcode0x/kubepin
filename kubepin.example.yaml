@@ -1,5 +1,6 @@
 context: development
 namespace: default
+address: 127.0.0.1
 env_file: .env
 forwards:
   - service: postgres
@@ -7,5 +8,6 @@ forwards:
     ports:
       - "${POSTGRES_LOCAL_PORT}:5432"
   - service: redis
+    address: localhost
     ports:
       - "16379:6379"

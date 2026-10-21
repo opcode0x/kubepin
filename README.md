@@ -2,7 +2,7 @@
 <h1 align="center">KubePin</h1>
 <p align="center"><strong>Kubernetes port forwards, together.</strong></p>
 
-`kubepin` runs several Kubernetes service port forwards from one command. Define mappings in JSON, YAML, or dotenv values. Each mapping binds to `127.0.0.1` and stays active until you press Ctrl+C. If a forward exits, `kubepin` restarts it automatically with a retry delay that grows from one to 30 seconds during repeated failures.
+`kubepin` runs several Kubernetes service port forwards from one command. Define mappings in JSON, YAML, or dotenv values. Each mapping binds to `127.0.0.1` by default and stays active until you press Ctrl+C. If a forward exits, `kubepin` restarts it automatically with a retry delay that grows from one to 30 seconds during repeated failures.
 
 <p align="center"><img src="docs/diagram.svg" width="560" alt="KubePin forwarding local ports to postgres, redis, and api services"></p>
 
@@ -34,6 +34,7 @@ Copy `kubepin.example.yaml` to `kubepin.yaml` and `.env.example` to `.env`, then
 ```yaml
 context: development
 namespace: default
+address: 127.0.0.1
 env_file: .env
 forwards:
   - service: postgres
@@ -41,6 +42,7 @@ forwards:
     ports:
       - "${POSTGRES_LOCAL_PORT}:5432"
   - service: redis
+    address: localhost
     ports:
       - "16379:6379"
 ```
@@ -50,7 +52,9 @@ forwards:
 ./kubepin
 ```
 
-`kubepin` discovers `kubepin.yaml`, `kubepin.yml`, then `kubepin.json` in the current directory. Use `-config path` to choose another file. The `env_file` path is relative to the config file. A `-env path` override is relative to the current directory. If neither is set and `.env` exists in the current directory, it is loaded automatically. Process environment values override dotenv values; `-context` and `-namespace` override the context and default namespace. Each service can specify its own `namespace`; when omitted, the top-level namespace applies.
+`kubepin` discovers `kubepin.yaml`, `kubepin.yml`, then `kubepin.json` in the current directory. Use `-config path` to choose another file. The `env_file` path is relative to the config file. A `-env path` override is relative to the current directory. If neither is set and `.env` exists in the current directory, it is loaded automatically. Process environment values override dotenv values; `-context`, `-namespace`, and `-address` override the corresponding global settings. Each service can specify its own `namespace` and `address`; when omitted, the top-level values apply.
+
+The `address` setting accepts `localhost`, an IPv4 or IPv6 address, or a comma-separated list of those values. For example, `address: 0.0.0.0` listens on all IPv4 interfaces, making the forwarded port reachable from other machines that can connect to your host. The default `127.0.0.1` keeps it local.
 
 ## JSON configuration
 
@@ -58,10 +62,11 @@ forwards:
 {
   "context": "development",
   "namespace": "default",
+  "address": "127.0.0.1",
   "env_file": ".env",
   "forwards": [
     {"service": "postgres", "namespace": "data", "ports": ["${POSTGRES_LOCAL_PORT}:5432"]},
-    {"service": "redis", "ports": ["16379:6379"]}
+    {"service": "redis", "address": "localhost", "ports": ["16379:6379"]}
   ]
 }
 ```
@@ -75,12 +80,14 @@ No config file is required. Put this in `.env`, or export the values in your she
 ```dotenv
 KUBEPIN_CONTEXT=development
 KUBEPIN_NAMESPACE=default
+KUBEPIN_ADDRESS=127.0.0.1
 KUBEPIN_FORWARD_POSTGRES=15432:5432
 KUBEPIN_NAMESPACE_POSTGRES=data
+KUBEPIN_ADDRESS_POSTGRES=0.0.0.0
 KUBEPIN_FORWARD_REDIS=16379:6379
 ```
 
-Each `KUBEPIN_FORWARD_<SERVICE>` value can contain comma-separated `LOCAL:REMOTE` mappings. `KUBEPIN_NAMESPACE_<SERVICE>` sets the namespace for that service, including one defined in a config file. Underscores in the variable suffix become hyphens in the Kubernetes service name. Environment mappings are added to mappings from a config file. Duplicate local ports, missing variables, malformed mappings, and unknown config fields fail before any forwards start.
+Each `KUBEPIN_FORWARD_<SERVICE>` value can contain comma-separated `LOCAL:REMOTE` mappings. `KUBEPIN_NAMESPACE_<SERVICE>` and `KUBEPIN_ADDRESS_<SERVICE>` override the namespace and bind address for that service, including one defined in a config file. `KUBEPIN_ADDRESS` sets the global bind address; `-address` overrides it, while service-specific values still take precedence. Underscores in the variable suffix become hyphens in the Kubernetes service name. Environment mappings are added to mappings from a config file. Duplicate local ports, missing variables, malformed mappings, invalid addresses, and unknown config fields fail before any forwards start.
 
 Run `./kubepin -h` for flags. Run `go test ./...` for tests.
 

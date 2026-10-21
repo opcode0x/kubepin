@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"regexp"
 	"sort"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 type target struct {
 	Service   string
 	Namespace string
+	Address   string
 	Port      string
 }
 
@@ -34,7 +36,19 @@ func expand(value string, vars map[string]string) (string, error) {
 	return out, nil
 }
 
-func resolve(forwards []forward, vars map[string]string, defaultNamespace string) ([]target, error) {
+func validateAddress(value string) (string, error) {
+	addresses := strings.Split(value, ",")
+	for i, address := range addresses {
+		address = strings.TrimSpace(address)
+		if address != "localhost" && net.ParseIP(address) == nil {
+			return "", fmt.Errorf("invalid bind address %q (expected an IP address or localhost)", address)
+		}
+		addresses[i] = address
+	}
+	return strings.Join(addresses, ","), nil
+}
+
+func resolve(forwards []forward, vars map[string]string, defaultNamespace, defaultAddress string) ([]target, error) {
 	for key, value := range vars {
 		if !strings.HasPrefix(key, "KUBEPIN_FORWARD_") {
 			continue
@@ -65,6 +79,20 @@ func resolve(forwards []forward, vars map[string]string, defaultNamespace string
 		if !serviceName.MatchString(namespace) || len(namespace) > 63 {
 			return nil, fmt.Errorf("service %s: invalid namespace %q", service, namespace)
 		}
+		address := f.Address
+		if value := vars["KUBEPIN_ADDRESS_"+strings.ToUpper(strings.ReplaceAll(service, "-", "_"))]; value != "" {
+			address = value
+		}
+		if address == "" {
+			address = defaultAddress
+		} else {
+			if address, err = expand(address, vars); err != nil {
+				return nil, fmt.Errorf("service %s address: %w", service, err)
+			}
+			if address, err = validateAddress(address); err != nil {
+				return nil, fmt.Errorf("service %s address: %w", service, err)
+			}
+		}
 		if len(f.Ports) == 0 {
 			return nil, fmt.Errorf("service %s has no ports", service)
 		}
@@ -86,7 +114,7 @@ func resolve(forwards []forward, vars map[string]string, defaultNamespace string
 				return nil, fmt.Errorf("local port %d is defined more than once", l)
 			}
 			used[l] = true
-			targets = append(targets, target{Service: service, Namespace: namespace, Port: fmt.Sprintf("%d:%d", l, r)})
+			targets = append(targets, target{Service: service, Namespace: namespace, Address: address, Port: fmt.Sprintf("%d:%d", l, r)})
 		}
 	}
 	sort.Slice(targets, func(i, j int) bool {
