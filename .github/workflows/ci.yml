@@ -38,3 +38,9 @@ jobs:
       - run: plutil -lint build/KubePin.app/Contents/Info.plist
       - run: codesign --verify --deep --strict build/KubePin.app
       - run: test -x build/KubePin.app/Contents/Resources/kubepin
+      - run: ditto -c -k --sequesterRsrc --keepParent build/KubePin.app build/KubePin-macos.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: KubePin-macos-development
+          path: build/KubePin-macos.zip
+          if-no-files-found: error
