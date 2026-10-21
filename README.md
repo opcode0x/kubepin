@@ -21,7 +21,18 @@ After the first tagged release, install the CLI from the [KubePin Homebrew tap](
 brew install opcode0x/tap/kubepin
 ```
 
-The formula builds the CLI from source and installs `kubectl` as a dependency. The planned macOS menu bar app will be a separate Homebrew cask, so installing the CLI will not install a GUI.
+The formula builds the CLI from source and installs `kubectl` as a dependency. The macOS menu bar app is built separately from source; a Homebrew cask can be added after signing and packaging a release.
+
+## macOS menu bar app
+
+On macOS 14 or newer, install Go, Xcode command line tools, and `kubectl`, then build and open the app:
+
+```sh
+macos/build.sh
+open build/KubePin.app
+```
+
+The app bundles the Go CLI, runs it from the menu bar, and shows forwarding output and reconnect attempts. Settings lets you create or edit a JSON config with a Kubernetes context, default namespace, per-service namespaces, ports, and an optional environment file. It can also run an existing YAML config; use **Open in Editor** to change YAML. The app stores its own JSON config at `~/Library/Application Support/KubePin/config.json`. It adds the standard Homebrew directories to `PATH` so the bundled CLI can find `kubectl` when launched from Finder.
 
 ## YAML configuration
 

@@ -22,3 +22,17 @@ jobs:
           cache-dependency-path: go.sum
       - run: go test ./...
       - run: go build -o kubepin .
+
+  macos-app:
+    name: Build macOS menu bar app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - run: macos/build.sh
+      - run: plutil -lint build/KubePin.app/Contents/Info.plist
+      - run: codesign --verify --deep --strict build/KubePin.app
+      - run: test -x build/KubePin.app/Contents/Resources/kubepin
