@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a2b">
+  <meta name="description" content="KubePin runs your Kubernetes service port forwards together from one config file, and reconnects them when they drop.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="KubePin — Kubernetes port forwards, together">
+  <meta property="og:description" content="One command for your Kubernetes service port forwards. YAML, JSON, or environment variables. Automatic reconnects.">
+  <title>KubePin — Kubernetes port forwards, together</title>
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header"><div class="wrap header-inner">
+    <a class="brand" href="#top" aria-label="KubePin home"><img src="./icon.svg" alt="" width="34" height="34"><span>KubePin</span></a>
+    <nav aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#configuration">Configuration</a><a class="nav-github" href="https://github.com/opcode0x/kubepin">GitHub <span aria-hidden="true">↗</span></a></nav>
+  </div></header>
+  <main id="main">
+    <section class="hero wrap" id="top">
+      <div class="hero-copy"><div class="eyebrow"><span class="eyebrow-dot"></span> A tiny CLI for Kubernetes workflows</div><h1>All your port forwards.<br><em>One place.</em></h1><p class="hero-lede">Keep the services you need within reach. Define your forwards once, start them together, and let KubePin reconnect when a connection drops.</p><div class="hero-actions"><a class="button primary" href="#get-started">Get started <span aria-hidden="true">↗</span></a><a class="button secondary" href="https://github.com/opcode0x/kubepin">View on GitHub <span aria-hidden="true">↗</span></a></div><div class="hero-notes"><span><i></i> Binds to 127.0.0.1</span><span><i></i> YAML, JSON, or .env</span><span><i></i> Open source</span></div></div>
+      <div class="hero-visual" role="img" aria-label="KubePin connecting local ports to three Kubernetes services"><div class="visual-grid"></div><div class="diagram-label">YOUR LOCAL WORKSPACE</div><div class="diagram-terminal"><span class="terminal-symbol">❯</span><span>kubepin</span><span class="terminal-cursor"></span></div><div class="connection connection-one"></div><div class="connection connection-two"></div><div class="connection connection-three"></div><div class="service-card service-one"><span class="service-icon postgres">P</span><span><b>postgres</b><small>localhost:15432</small></span><span class="status-dot"></span></div><div class="service-card service-two"><span class="service-icon redis">R</span><span><b>redis</b><small>localhost:16379</small></span><span class="status-dot"></span></div><div class="service-card service-three"><span class="service-icon api">A</span><span><b>api</b><small>localhost:8080</small></span><span class="status-dot"></span></div><div class="visual-foot"><span class="pulse"></span> 3 forwards running <span class="visual-foot-right">↻ reconnects automatically</span></div></div>
+    </section>
+    <div class="strip"><div class="wrap strip-inner"><span>ONE COMMAND</span><b>→</b><span>MULTIPLE SERVICES</span><b>→</b><span>LOCAL PORTS READY</span></div></div>
+    <section class="section wrap" id="how-it-works"><div class="section-intro"><div class="section-kicker">01 / THE IDEA</div><h2>Less babysitting.<br><span>More building.</span></h2><p>KubePin manages the forwards that make local development possible, so you can focus on the app in front of you.</p></div><div class="feature-list"><article class="feature"><span class="feature-number">01</span><div><h3>Start together</h3><p>Launch every configured service forward with a single command. Each runs as its own supervised process.</p></div><span class="feature-mark" aria-hidden="true">↗</span></article><article class="feature"><span class="feature-number">02</span><div><h3>Stay connected</h3><p>If a forward exits, KubePin retries it automatically with a delay that grows during repeated failures.</p></div><span class="feature-mark" aria-hidden="true">↻</span></article><article class="feature"><span class="feature-number">03</span><div><h3>Keep it local</h3><p>Forwards bind to 127.0.0.1, so your development services listen on your own machine.</p></div><span class="feature-mark" aria-hidden="true">◎</span></article></div></section>
+    <section class="config-section" id="configuration"><div class="wrap config-grid"><div class="config-copy"><div class="section-kicker">02 / CONFIGURATION</div><h2>Fits the way<br><span>you work.</span></h2><p>Keep a shareable YAML or JSON file in your project, or configure forwards with environment variables. Override context and namespace from the command line when you need to.</p><div class="config-pills"><span>YAML</span><span>JSON</span><span>.env</span><span>CLI flags</span></div><a class="text-link" href="https://github.com/opcode0x/kubepin#yaml-configuration">Read the configuration guide <span aria-hidden="true">↗</span></a></div><div class="code-panel"><div class="code-head"><span class="window-dots"><i></i><i></i><i></i></span><span>kubepin.yaml</span><button class="copy-button" type="button" data-copy="config" aria-label="Copy YAML configuration">Copy</button></div><pre id="config-code"><code><span class="token-key">context</span>: development
+<span class="token-key">namespace</span>: default
+<span class="token-key">forwards</span>:
+  - <span class="token-key">service</span>: postgres
+    <span class="token-key">namespace</span>: data
+    <span class="token-key">ports</span>:
+      - <span class="token-string">"15432:5432"</span>
+  - <span class="token-key">service</span>: redis
+    <span class="token-key">ports</span>:
+      - <span class="token-string">"16379:6379"</span></code></pre><div class="code-caption"><span class="caption-dot"></span> Two services. One file.</div></div></div></section>
+    <section class="start-section wrap" id="get-started"><div class="section-kicker">03 / GET STARTED</div><div class="start-heading"><h2>Ready when<br><span>you are.</span></h2><p>Build from source with Go 1.22+. You’ll need <code>kubectl</code> and access to your Kubernetes context. The Homebrew tap will be available after the first tagged release.</p></div><div class="steps"><div class="step"><span class="step-index">01</span><div><h3>Get KubePin</h3><div class="command"><code>git clone https://github.com/opcode0x/kubepin.git</code><button class="copy-button" type="button" data-copy="clone" aria-label="Copy clone command">Copy</button></div><div class="command"><code>cd kubepin &amp;&amp; go build -o kubepin .</code><button class="copy-button" type="button" data-copy="build" aria-label="Copy build command">Copy</button></div><p>See the <a href="https://github.com/opcode0x/kubepin#build">build instructions</a>.</p></div></div><div class="step"><span class="step-index">02</span><div><h3>Add your forwards</h3><p>Create <code>kubepin.yaml</code> in your project, using the example above as a starting point.</p></div></div><div class="step"><span class="step-index">03</span><div><h3>Run it</h3><div class="command"><code>./kubepin</code><button class="copy-button" type="button" data-copy="run" aria-label="Copy run command">Copy</button></div><p>Use <code>./kubepin -dry-run</code> to inspect commands first. Press Ctrl+C to stop.</p></div></div></div></section>
+    <section class="closing"><div class="wrap closing-inner"><div><div class="section-kicker">KEEP THE CONNECTION</div><h2>Pin your services.<br><span>Get back to work.</span></h2></div><a class="button primary" href="https://github.com/opcode0x/kubepin">Explore the project <span aria-hidden="true">↗</span></a></div></section>
+  </main>
+  <footer><div class="wrap footer-inner"><a class="brand" href="#top"><img src="./icon.svg" alt="" width="28" height="28"><span>KubePin</span></a><span>Open source under the MIT license.</span><a href="https://github.com/opcode0x/kubepin">GitHub ↗</a></div></footer>
+  <script src="./script.js" defer></script>
+</body>
+</html>
