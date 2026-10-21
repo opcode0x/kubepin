@@ -21,7 +21,7 @@ Install the CLI from the [KubePin Homebrew tap](https://github.com/opcode0x/home
 brew install opcode0x/tap/kubepin
 ```
 
-The formula builds the CLI from source and installs `kubectl` as a dependency. The planned macOS menu bar app will be a separate Homebrew cask, so installing the CLI will not install a GUI.
+The formula builds the CLI from source and installs `kubectl` as a dependency.
 
 ## YAML configuration
 
@@ -83,7 +83,3 @@ Run `./kubepin -h` for flags. Run `go test ./...` for tests.
 ## Contributing
 
 Issues and pull requests are welcome. Please include a short explanation of the change and run `go test ./...`. This project is licensed under MIT; see [LICENSE](LICENSE).
-
-## Project page
-
-The public page is in [`docs/`](docs/). It is a static site with no build step. To publish it with GitHub Pages, open **Settings → Pages**, choose **Deploy from a branch**, then select your publishing branch and the **`/docs`** folder. GitHub Pages will serve `docs/index.html`; `docs/.nojekyll` disables Jekyll processing.
