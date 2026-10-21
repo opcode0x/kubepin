@@ -1,6 +1,10 @@
-# KubePin
+<p align="center"><img src="docs/icon.svg" width="80" height="80" alt="KubePin icon"></p>
+<h1 align="center">KubePin</h1>
+<p align="center"><strong>Kubernetes port forwards, together.</strong></p>
 
 `kubepin` runs several Kubernetes service port forwards from one command. Define mappings in JSON, YAML, or dotenv values. Each mapping binds to `127.0.0.1` and stays active until you press Ctrl+C. If a forward exits, `kubepin` restarts it automatically with a retry delay that grows from one to 30 seconds during repeated failures.
+
+<p align="center"><img src="docs/diagram.svg" width="560" alt="KubePin forwarding local ports to postgres, redis, and api services"></p>
 
 ## Requirements
 

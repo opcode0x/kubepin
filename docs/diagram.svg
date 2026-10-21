@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 480" role="img" aria-labelledby="title description">
+  <title id="title">KubePin local workspace diagram</title>
+  <desc id="description">A kubepin terminal connects to postgres, redis, and api service cards. Three forwards are running and reconnect automatically.</desc>
+  <defs>
+    <pattern id="grid" width="27" height="27" patternUnits="userSpaceOnUse"><path d="M27 0H0V27" fill="none" stroke="#ffffff" stroke-opacity=".065"/></pattern>
+    <filter id="shadow" x="-20%" y="-30%" width="150%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="560" height="480" rx="9" fill="#101A2B"/>
+  <rect width="560" height="480" rx="9" fill="url(#grid)"/>
+  <text x="34" y="42" fill="#8DA0B7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="500" letter-spacing="1">YOUR LOCAL WORKSPACE</text>
+  <rect x="35" y="194" width="205" height="57" rx="6" fill="#1B2A3D" stroke="#526579"/>
+  <text x="53" y="231" fill="#A8F074" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">❯</text>
+  <text x="79" y="230" fill="#FFFFFF" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="500">kubepin</text>
+  <rect x="164" y="211" width="8" height="19" fill="#A8F074" opacity=".7"/>
+  <path d="M240 222 L306 159 M240 222 H306 M240 222 L306 285" fill="none" stroke="#9DE071" stroke-width="1.5" stroke-dasharray="5 5"/>
+  <g fill="#A8F074"><circle cx="240" cy="222" r="4"/><circle cx="306" cy="159" r="4"/><circle cx="306" cy="222" r="4"/><circle cx="306" cy="285" r="4"/></g>
+  <g filter="url(#shadow)">
+    <rect x="320" y="101" width="210" height="77" rx="6" fill="#FFFFFF"/>
+    <rect x="320" y="202" width="210" height="77" rx="6" fill="#FFFFFF"/>
+    <rect x="320" y="303" width="210" height="77" rx="6" fill="#FFFFFF"/>
+  </g>
+  <rect x="332" y="120" width="38" height="38" rx="5" fill="#E6F1FF"/><text x="351" y="146" text-anchor="middle" fill="#366898" font-family="system-ui, sans-serif" font-size="17" font-weight="700">P</text>
+  <text x="381" y="135" fill="#101A2B" font-family="system-ui, sans-serif" font-size="15" font-weight="700">postgres</text><text x="381" y="153" fill="#738195" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">localhost:15432</text><circle cx="511" cy="139" r="4" fill="#80C957"/>
+  <rect x="332" y="221" width="38" height="38" rx="5" fill="#FFE8E5"/><text x="351" y="247" text-anchor="middle" fill="#BF5041" font-family="system-ui, sans-serif" font-size="17" font-weight="700">R</text>
+  <text x="381" y="236" fill="#101A2B" font-family="system-ui, sans-serif" font-size="15" font-weight="700">redis</text><text x="381" y="254" fill="#738195" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">localhost:16379</text><circle cx="511" cy="240" r="4" fill="#80C957"/>
+  <rect x="332" y="322" width="38" height="38" rx="5" fill="#E6F4DC"/><text x="351" y="348" text-anchor="middle" fill="#56863D" font-family="system-ui, sans-serif" font-size="17" font-weight="700">A</text>
+  <text x="381" y="337" fill="#101A2B" font-family="system-ui, sans-serif" font-size="15" font-weight="700">api</text><text x="381" y="355" fill="#738195" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">localhost:8080</text><circle cx="511" cy="341" r="4" fill="#80C957"/>
+  <path d="M0 425H560V471Q560 480 551 480H9Q0 480 0 471Z" fill="#0C1422"/>
+  <circle cx="36" cy="452" r="4" fill="#78CC45"/>
+  <text x="49" y="456" fill="#9CB1C7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">3 forwards running</text>
+  <text x="525" y="456" text-anchor="end" fill="#749C79" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">↻ reconnects automatically</text>
+</svg>
