@@ -33,6 +33,7 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
       - run: macos/build.sh
+      - run: xcrun swiftc macos/Sources/ConfigModel.swift macos/Tests/ConfigModelTests.swift -o build/config-model-tests && build/config-model-tests
       - run: plutil -lint build/KubePin.app/Contents/Info.plist
       - run: codesign --verify --deep --strict build/KubePin.app
       - run: test -x build/KubePin.app/Contents/Resources/kubepin

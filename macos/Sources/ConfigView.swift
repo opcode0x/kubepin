@@ -1,29 +1,6 @@
 import AppKit
 import SwiftUI
 
-private struct AppConfig: Codable {
-    var context = ""
-    var namespace = "default"
-    var envFile = ""
-    var forwards: [ForwardEntry] = []
-
-    enum CodingKeys: String, CodingKey {
-        case context, namespace, forwards
-        case envFile = "env_file"
-    }
-}
-
-private struct ForwardEntry: Codable, Identifiable {
-    var id = UUID()
-    var service = ""
-    var namespace = ""
-    var ports: [String] = [""]
-
-    enum CodingKeys: String, CodingKey {
-        case service, namespace, ports
-    }
-}
-
 struct ConfigView: View {
     @ObservedObject var controller: ForwardController
     @State private var config = AppConfig()
