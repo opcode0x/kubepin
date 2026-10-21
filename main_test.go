@@ -61,6 +61,36 @@ func TestRunDryRunEnvOnly(t *testing.T) {
 	}
 }
 
+func TestPreparePrecedenceAndRelativeEnvFile(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "kubepin.yaml")
+	if err := os.WriteFile(configPath, []byte("context: config-context\nnamespace: config-ns\nenv_file: vars.env\nforwards:\n  - service: db\n    ports: ['${LOCAL_PORT}:5432']\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "vars.env"), []byte("KUBEPIN_CONTEXT=file-context\nKUBEPIN_NAMESPACE=file-ns\nLOCAL_PORT=15432\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("KUBEPIN_CONTEXT", "process-context")
+	t.Setenv("KUBEPIN_NAMESPACE", "process-ns")
+	plan, err := prepare(options{configPath: configPath, context: "flag-context", namespace: "flag-ns"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.context != "flag-context" || len(plan.targets) != 1 || plan.targets[0].Namespace != "flag-ns" || plan.targets[0].Port != "15432:5432" {
+		t.Fatalf("unexpected plan: %+v", plan)
+	}
+}
+
+func TestRunHelpDoesNotRequireConfig(t *testing.T) {
+	var out strings.Builder
+	if err := run([]string{"-help"}, &out, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "-dry-run") {
+		t.Fatalf("expected flag help, got %q", out.String())
+	}
+}
+
 func TestMissingVariable(t *testing.T) {
 	_, err := resolve([]forward{{Service: "db", Ports: []string{"${MISSING}:5432"}}}, map[string]string{}, "default")
 	if err == nil || !strings.Contains(err.Error(), "MISSING") {
