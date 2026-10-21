@@ -16,7 +16,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -29,13 +31,15 @@ type config struct {
 }
 
 type forward struct {
-	Service string   `json:"service" yaml:"service"`
-	Ports   []string `json:"ports" yaml:"ports"`
+	Service   string   `json:"service" yaml:"service"`
+	Namespace string   `json:"namespace" yaml:"namespace"`
+	Ports     []string `json:"ports" yaml:"ports"`
 }
 
 type target struct {
-	Service string
-	Port    string
+	Service   string
+	Namespace string
+	Port      string
 }
 
 var variable = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)\}`)
@@ -54,7 +58,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 	configPath := flags.String("config", "", "JSON or YAML config file (default: discover kubepin.yaml, kubepin.yml, or kubepin.json)")
 	envPath := flags.String("env", "", "dotenv file (overrides env_file in config)")
 	contextName := flags.String("context", "", "Kubernetes context override")
-	namespace := flags.String("namespace", "", "Kubernetes namespace override")
+	namespace := flags.String("namespace", "", "default namespace override (individual service namespaces take precedence)")
 	dryRun := flags.Bool("dry-run", false, "print kubectl commands without running them")
 	if err := flags.Parse(args); err == flag.ErrHelp {
 		return nil
@@ -130,60 +134,74 @@ func run(args []string, stdout, stderr io.Writer) error {
 	if cfg.Context == "" {
 		return errors.New("Kubernetes context is required in config, KUBEPIN_CONTEXT, or -context")
 	}
-	targets, err := resolve(cfg.Forwards, vars)
+	targets, err := resolve(cfg.Forwards, vars, cfg.Namespace)
 	if err != nil {
 		return err
 	}
 	if len(targets) == 0 {
 		return errors.New("no forwards defined in config or KUBEPIN_FORWARD_* environment variables")
 	}
+	kubectlPath := ""
 	if !*dryRun {
-		if _, err := exec.LookPath("kubectl"); err != nil {
+		if kubectlPath, err = exec.LookPath("kubectl"); err != nil {
 			return fmt.Errorf("kubectl is required: %w", err)
 		}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	type result struct {
-		target target
-		err    error
-	}
-	results := make(chan result, len(targets))
-	started := 0
+	var workers sync.WaitGroup
 	for _, t := range targets {
-		commandArgs := []string{"--context", cfg.Context, "--namespace", cfg.Namespace, "port-forward", "service/" + t.Service, t.Port, "--address", "127.0.0.1"}
+		commandArgs := []string{"--context", cfg.Context, "--namespace", t.Namespace, "port-forward", "service/" + t.Service, t.Port, "--address", "127.0.0.1"}
 		fmt.Fprintln(stdout, "kubectl", strings.Join(commandArgs, " "))
 		if *dryRun {
 			continue
 		}
-		cmd := exec.CommandContext(ctx, "kubectl", commandArgs...)
-		cmd.Stdout, cmd.Stderr = stdout, stderr
-		if err := cmd.Start(); err != nil {
-			stop()
-			for i := 0; i < started; i++ {
-				<-results
-			}
-			return fmt.Errorf("start %s %s: %w", t.Service, t.Port, err)
-		}
-		started++
-		go func(t target) { results <- result{t, cmd.Wait()} }(t)
+		workers.Add(1)
+		go func(t target, args []string) {
+			defer workers.Done()
+			supervise(ctx, kubectlPath, args, t, stdout, stderr)
+		}(t, commandArgs)
 	}
 	if *dryRun {
 		return nil
 	}
-	var firstErr error
-	for i := 0; i < started; i++ {
-		r := <-results
-		if ctx.Err() == nil {
-			if r.err != nil {
-				firstErr = fmt.Errorf("forward %s %s: %w", r.target.Service, r.target.Port, r.err)
-			} else {
-				firstErr = fmt.Errorf("forward %s %s exited unexpectedly", r.target.Service, r.target.Port)
+	<-ctx.Done()
+	workers.Wait()
+	return nil
+}
+
+func supervise(ctx context.Context, kubectlPath string, args []string, t target, stdout, stderr io.Writer) {
+	delay := time.Second
+	for ctx.Err() == nil {
+		started := time.Now()
+		cmd := exec.CommandContext(ctx, kubectlPath, args...)
+		cmd.Stdout, cmd.Stderr = stdout, stderr
+		err := cmd.Run()
+		if ctx.Err() != nil {
+			return
+		}
+		if time.Since(started) >= 30*time.Second {
+			delay = time.Second
+		}
+		if err == nil {
+			fmt.Fprintf(stderr, "kubepin: forward %s/%s %s ended; reconnecting in %s\n", t.Namespace, t.Service, t.Port, delay)
+		} else {
+			fmt.Fprintf(stderr, "kubepin: forward %s/%s %s failed: %v; reconnecting in %s\n", t.Namespace, t.Service, t.Port, err, delay)
+		}
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
+		if delay < 30*time.Second {
+			delay *= 2
+			if delay > 30*time.Second {
+				delay = 30 * time.Second
 			}
-			stop()
 		}
 	}
-	return firstErr
 }
 
 func readConfig(path string) (config, error) {
@@ -269,7 +287,7 @@ func expand(value string, vars map[string]string) (string, error) {
 	return out, nil
 }
 
-func resolve(forwards []forward, vars map[string]string) ([]target, error) {
+func resolve(forwards []forward, vars map[string]string, defaultNamespace string) ([]target, error) {
 	for key, value := range vars {
 		if !strings.HasPrefix(key, "KUBEPIN_FORWARD_") {
 			continue
@@ -286,6 +304,19 @@ func resolve(forwards []forward, vars map[string]string) ([]target, error) {
 		}
 		if !serviceName.MatchString(service) || len(service) > 63 {
 			return nil, fmt.Errorf("invalid service name %q", service)
+		}
+		namespace := f.Namespace
+		if value := vars["KUBEPIN_NAMESPACE_"+strings.ToUpper(strings.ReplaceAll(service, "-", "_"))]; value != "" {
+			namespace = value
+		}
+		if namespace == "" {
+			namespace = defaultNamespace
+		}
+		if namespace, err = expand(namespace, vars); err != nil {
+			return nil, fmt.Errorf("service %s namespace: %w", service, err)
+		}
+		if !serviceName.MatchString(namespace) || len(namespace) > 63 {
+			return nil, fmt.Errorf("service %s: invalid namespace %q", service, namespace)
 		}
 		if len(f.Ports) == 0 {
 			return nil, fmt.Errorf("service %s has no ports", service)
@@ -308,12 +339,15 @@ func resolve(forwards []forward, vars map[string]string) ([]target, error) {
 				return nil, fmt.Errorf("local port %d is defined more than once", l)
 			}
 			used[l] = true
-			targets = append(targets, target{service, fmt.Sprintf("%d:%d", l, r)})
+			targets = append(targets, target{Service: service, Namespace: namespace, Port: fmt.Sprintf("%d:%d", l, r)})
 		}
 	}
 	sort.Slice(targets, func(i, j int) bool {
-		if targets[i].Service == targets[j].Service {
+		if targets[i].Service == targets[j].Service && targets[i].Namespace == targets[j].Namespace {
 			return targets[i].Port < targets[j].Port
+		}
+		if targets[i].Service == targets[j].Service {
+			return targets[i].Namespace < targets[j].Namespace
 		}
 		return targets[i].Service < targets[j].Service
 	})

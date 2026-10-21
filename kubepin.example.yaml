@@ -3,6 +3,7 @@ namespace: default
 env_file: .env
 forwards:
   - service: postgres
+    namespace: data
     ports:
       - "${POSTGRES_LOCAL_PORT}:5432"
   - service: redis

@@ -1,17 +1,19 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestReadConfigFormats(t *testing.T) {
 	for _, tc := range []struct{ name, data string }{
-		{"kubepin.json", `{"context":"dev","forwards":[{"service":"db","ports":["5432:5432"]}]}`},
-		{"kubepin.yaml", "context: dev\nforwards:\n  - service: db\n    ports:\n      - '5432:5432'\n"},
-		{"kubepin.yml", "context: dev\nforwards:\n  - service: db\n    ports:\n      - '5432:5432'\n"},
+		{"kubepin.json", `{"context":"dev","forwards":[{"service":"db","namespace":"data","ports":["5432:5432"]}]}`},
+		{"kubepin.yaml", "context: dev\nforwards:\n  - service: db\n    namespace: data\n    ports:\n      - '5432:5432'\n"},
+		{"kubepin.yml", "context: dev\nforwards:\n  - service: db\n    namespace: data\n    ports:\n      - '5432:5432'\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), tc.name)
@@ -22,7 +24,7 @@ func TestReadConfigFormats(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if cfg.Context != "dev" || len(cfg.Forwards) != 1 || cfg.Forwards[0].Ports[0] != "5432:5432" {
+			if cfg.Context != "dev" || len(cfg.Forwards) != 1 || cfg.Forwards[0].Namespace != "data" || cfg.Forwards[0].Ports[0] != "5432:5432" {
 				t.Fatalf("unexpected config: %+v", cfg)
 			}
 		})
@@ -30,16 +32,16 @@ func TestReadConfigFormats(t *testing.T) {
 }
 
 func TestResolveEnvAndDuplicatePort(t *testing.T) {
-	vars := map[string]string{"DB_PORT": "15432", "KUBEPIN_FORWARD_CACHE": "16379:6379"}
-	forwards := []forward{{Service: "db", Ports: []string{"${DB_PORT}:5432"}}}
-	targets, err := resolve(forwards, vars)
+	vars := map[string]string{"DB_PORT": "15432", "KUBEPIN_FORWARD_CACHE": "16379:6379", "KUBEPIN_NAMESPACE_CACHE": "cache-system"}
+	forwards := []forward{{Service: "db", Namespace: "data", Ports: []string{"${DB_PORT}:5432"}}}
+	targets, err := resolve(forwards, vars, "default")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(targets) != 2 || targets[0].Port != "16379:6379" || targets[1].Port != "15432:5432" {
+	if len(targets) != 2 || targets[0].Port != "16379:6379" || targets[0].Namespace != "cache-system" || targets[1].Port != "15432:5432" || targets[1].Namespace != "data" {
 		t.Fatalf("unexpected targets: %+v", targets)
 	}
-	_, err = resolve(append(forwards, forward{Service: "other", Ports: []string{"15432:5432"}}), vars)
+	_, err = resolve(append(forwards, forward{Service: "other", Ports: []string{"15432:5432"}}), vars, "default")
 	if err == nil || !strings.Contains(err.Error(), "more than once") {
 		t.Fatalf("expected duplicate port error, got %v", err)
 	}
@@ -47,21 +49,57 @@ func TestResolveEnvAndDuplicatePort(t *testing.T) {
 
 func TestRunDryRunEnvOnly(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "ports.env")
-	if err := os.WriteFile(path, []byte("KUBEPIN_CONTEXT=dev\nKUBEPIN_FORWARD_POSTGRES=15432:5432\n"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("KUBEPIN_CONTEXT=dev\nKUBEPIN_FORWARD_POSTGRES=15432:5432\nKUBEPIN_NAMESPACE_POSTGRES=data\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	var out strings.Builder
 	if err := run([]string{"-env", path, "-dry-run"}, &out, &out); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "--context dev --namespace default port-forward service/postgres 15432:5432") {
+	if !strings.Contains(out.String(), "--context dev --namespace data port-forward service/postgres 15432:5432") {
 		t.Fatalf("unexpected output: %s", out.String())
 	}
 }
 
 func TestMissingVariable(t *testing.T) {
-	_, err := resolve([]forward{{Service: "db", Ports: []string{"${MISSING}:5432"}}}, map[string]string{})
+	_, err := resolve([]forward{{Service: "db", Ports: []string{"${MISSING}:5432"}}}, map[string]string{}, "default")
 	if err == nil || !strings.Contains(err.Error(), "MISSING") {
 		t.Fatalf("expected missing variable error, got %v", err)
+	}
+}
+
+func TestSuperviseReconnects(t *testing.T) {
+	dir := t.TempDir()
+	script := filepath.Join(dir, "kubectl")
+	counter := filepath.Join(dir, "attempts")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nprintf x >> \"$1\"\nexit 1\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var out strings.Builder
+	done := make(chan struct{})
+	go func() {
+		supervise(ctx, script, []string{counter}, target{Service: "db", Namespace: "data", Port: "15432:5432"}, &out, &out)
+		close(done)
+	}()
+	deadline := time.After(4 * time.Second)
+	for {
+		data, _ := os.ReadFile(counter)
+		if len(data) >= 2 {
+			cancel()
+			<-done
+			if !strings.Contains(out.String(), "reconnecting") {
+				t.Fatalf("expected reconnect notice, got %q", out.String())
+			}
+			return
+		}
+		select {
+		case <-deadline:
+			cancel()
+			<-done
+			t.Fatalf("expected two starts, got %d", len(data))
+		case <-time.After(20 * time.Millisecond):
+		}
 	}
 }
