@@ -9,16 +9,20 @@ permissions:
 
 jobs:
   test:
-    name: Go test and build
+    name: Go test and build (${{ matrix.os }}, Go ${{ matrix.go }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            go: '1.22.x'
+          - os: macos-latest
+            go: '1.27.3'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: ${{ matrix.go }}
           cache-dependency-path: go.sum
       - run: go test ./...
       - run: go build -o kubepin .
