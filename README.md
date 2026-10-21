@@ -94,3 +94,7 @@ Run `./kubepin -h` for flags. Run `go test ./...` for tests.
 ## Contributing
 
 Issues and pull requests are welcome. Please include a short explanation of the change and run `go test ./...`. This project is licensed under MIT; see [LICENSE](LICENSE).
+
+## Project page
+
+The public page is in [`docs/`](docs/). It is a static site with no build step. To publish it with GitHub Pages, open **Settings → Pages**, choose **Deploy from a branch**, then select your publishing branch and the **`/docs`** folder. GitHub Pages will serve `docs/index.html`; `docs/.nojekyll` disables Jekyll processing.
