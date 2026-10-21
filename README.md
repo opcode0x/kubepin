@@ -15,7 +15,7 @@ go build -o kubepin .
 
 ## Homebrew
 
-After the first tagged release, install the CLI from the [KubePin Homebrew tap](https://github.com/opcode0x/homebrew-tap):
+Install the CLI from the [KubePin Homebrew tap](https://github.com/opcode0x/homebrew-tap):
 
 ```sh
 brew install opcode0x/tap/kubepin

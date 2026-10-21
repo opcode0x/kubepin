@@ -9,9 +9,8 @@ forwards:
   - service: redis
     ports:
       - "16379:6379"`,
-  clone: 'git clone https://github.com/opcode0x/kubepin.git',
-  build: 'cd kubepin && go build -o kubepin .',
-  run: './kubepin'
+  install: 'brew install opcode0x/tap/kubepin',
+  run: 'kubepin'
 };
 
 document.querySelectorAll('[data-copy]').forEach((button) => {
