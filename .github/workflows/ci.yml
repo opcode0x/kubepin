@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,3 +23,24 @@ jobs:
           cache-dependency-path: go.sum
       - run: go test ./...
       - run: go build -o kubepin .
+
+  macos-app:
+    name: Build macOS menu bar app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - run: macos/build.sh
+      - run: xcrun swiftc macos/Sources/ConfigModel.swift macos/Tests/ConfigModelTests.swift -o build/config-model-tests && build/config-model-tests
+      - run: plutil -lint build/KubePin.app/Contents/Info.plist
+      - run: codesign --verify --deep --strict build/KubePin.app
+      - run: test -x build/KubePin.app/Contents/Resources/kubepin
+      - run: ditto -c -k --sequesterRsrc --keepParent build/KubePin.app build/KubePin-macos.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: KubePin-macos-development
+          path: build/KubePin-macos.zip
+          if-no-files-found: error
